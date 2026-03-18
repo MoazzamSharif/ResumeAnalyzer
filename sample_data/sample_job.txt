@@ -1,0 +1,3 @@
+We are looking for a Computer Science intern to assist in developing web applications integrated with AI models. 
+The candidate should have knowledge of Python, Machine Learning, Deep Learning, HTML, CSS, and basic React. 
+Familiarity with NLP and data processing is a plus.
