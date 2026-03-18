@@ -1,4 +1,4 @@
-pip install streamlit
-pip install pdfplumber     
-pip install scikit-learn   
-pip install nltk           
+streamlit
+pdfplumber     
+scikit-learn   
+nltk           
