@@ -10,7 +10,7 @@ A local, privacy-first resume scoring tool built with Streamlit. Upload a resume
 
 > Upload your resume → Paste the JD → Click Analyze
 
-![Resume Analyzer Screenshot](screenshot.png)
+![Resume Analyzer Screenshot](screenshot/screenshot.png)
 
 The app scores your resume out of 100 and shows which skills from the job description you have and which you're missing.
 
