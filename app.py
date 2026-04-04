@@ -1,357 +1,428 @@
-﻿import streamlit as st
+﻿# -*- coding: utf-8 -*-
+import streamlit as st
 import os
+import tempfile
 import nltk
+
 nltk.data.path.append(r"C:\Users\moazz\AppData\Roaming\nltk_data")
 
-from utils import extract_text_from_pdf, clean_text
-from model import calculate_similarity
+from utils import extract_text_from_pdf
+from model import calculate_similarity, extract_skill_keywords, extract_meaningful_keywords
 
-# ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Resume Analyzer",
-    page_icon="🔥",
+    page_icon="",
     layout="centered",
 )
 
-# ── Custom CSS ────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
 
-/* ── Root tokens ── */
 :root {
-    --bg:        #0a0a0f;
-    --surface:   #111118;
-    --surface2:  #18181f;
-    --border:    #2a2a38;
-    --ember1:    #ff4d00;
-    --ember2:    #ff8c00;
-    --ember3:    #ffb347;
-    --text:      #f0ede8;
-    --muted:     #7a7890;
-    --radius:    14px;
+    --ink:      #1c1917;
+    --ink2:     #44403c;
+    --ink3:     #78716c;
+    --bg:       #262220;
+    --surface:  #2e2a28;
+    --surface2: #363230;
+    --border:   #3d3935;
+    --border2:  #504c49;
+    --cream:    #e8e2d9;
+    --cream2:   #d6cfc5;
+    --accent:   #a3b899;
+    --accent2:  #7a9e6e;
+    --radius:   5px;
 }
 
-/* ── Global reset ── */
 html, body, [data-testid="stAppViewContainer"] {
     background: var(--bg) !important;
-    color: var(--text) !important;
-    font-family: 'DM Mono', monospace !important;
+    color: var(--cream) !important;
+    font-family: 'IBM Plex Sans', sans-serif !important;
 }
-[data-testid="stHeader"] { background: transparent !important; }
-[data-testid="stToolbar"] { display: none; }
-.block-container { max-width: 760px; padding: 3rem 2rem 5rem !important; }
+[data-testid="stHeader"],
+[data-testid="stToolbar"],
+footer, #MainMenu { display: none !important; visibility: hidden !important; }
 
-/* ── Hero header ── */
-.hero {
-    text-align: center;
-    padding: 3.5rem 0 2.5rem;
-    position: relative;
+.block-container {
+    max-width: 680px !important;
+    padding: 4rem 2rem 6rem !important;
 }
-.hero-badge {
-    display: inline-block;
-    font-family: 'DM Mono', monospace;
-    font-size: 0.68rem;
+
+/* Header */
+.site-header {
+    border-bottom: 1px solid var(--border2);
+    padding-bottom: 2.25rem;
+    margin-bottom: 3rem;
+}
+.site-kicker {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink3);
+    margin-bottom: 0.85rem;
+}
+.site-title {
+    font-family: 'Playfair Display', serif !important;
+    font-size: clamp(2.2rem, 5vw, 3.2rem) !important;
+    font-weight: 400 !important;
+    line-height: 1.1 !important;
+    color: var(--cream) !important;
+    margin: 0 0 0.85rem !important;
+    letter-spacing: -0.02em;
+}
+.site-desc {
+    font-size: 0.875rem;
+    color: var(--ink3);
+    line-height: 1.75;
+    font-weight: 300;
+}
+
+/* Labels */
+.field-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.62rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--ember2);
-    border: 1px solid var(--ember1);
-    border-radius: 999px;
-    padding: 0.3rem 1rem;
-    margin-bottom: 1.4rem;
-}
-.hero h1 {
-    font-family: 'Syne', sans-serif !important;
-    font-size: clamp(2.4rem, 6vw, 3.6rem) !important;
-    font-weight: 800 !important;
-    line-height: 1.05 !important;
-    margin: 0 !important;
-    background: linear-gradient(135deg, var(--ember3) 0%, var(--ember1) 55%, #c2410c 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-.hero-sub {
-    margin-top: 1rem;
-    color: var(--muted);
-    font-size: 0.85rem;
-    letter-spacing: 0.03em;
-    line-height: 1.7;
+    color: var(--ink3);
+    margin-bottom: 0.5rem;
+    display: block;
 }
 
-/* ── Glow divider ── */
-.glow-divider {
-    height: 1px;
-    background: linear-gradient(90deg, transparent 0%, var(--ember1) 40%, var(--ember2) 60%, transparent 100%);
-    margin: 2.2rem 0;
-    opacity: 0.55;
-}
-
-/* ── Section label ── */
-.section-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.68rem;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--ember2);
-    margin-bottom: 0.6rem;
-}
-
-/* ── Upload box ── */
+/* Upload */
 [data-testid="stFileUploader"] {
     background: var(--surface) !important;
-    border: 1.5px dashed var(--border) !important;
+    border: 1px solid var(--border2) !important;
     border-radius: var(--radius) !important;
-    transition: border-color 0.25s;
-    padding: 0.5rem 1rem !important;
+    padding: 0.25rem 0.75rem !important;
+    transition: border-color 0.2s;
 }
-[data-testid="stFileUploader"]:hover {
-    border-color: var(--ember1) !important;
-}
+[data-testid="stFileUploader"]:hover { border-color: var(--border2) !important; }
 [data-testid="stFileUploader"] label { display: none !important; }
 [data-testid="stFileUploaderDropzoneInstructions"] span,
 [data-testid="stFileUploaderDropzoneInstructions"] small,
 [data-testid="stFileUploaderDropzoneInstructions"] p {
-    color: var(--muted) !important;
-    font-family: 'DM Mono', monospace !important;
-    font-size: 0.8rem !important;
+    color: var(--ink3) !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 0.72rem !important;
 }
 [data-testid="stBaseButton-secondary"] {
     background: var(--surface2) !important;
-    border: 1px solid var(--border) !important;
-    color: var(--text) !important;
-    border-radius: 8px !important;
-    font-family: 'DM Mono', monospace !important;
-    font-size: 0.75rem !important;
+    border: 1px solid var(--border2) !important;
+    color: var(--cream2) !important;
+    border-radius: var(--radius) !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 0.7rem !important;
 }
 
-/* ── Textarea ── */
+/* Textarea */
 [data-testid="stTextArea"] textarea {
     background: var(--surface) !important;
-    border: 1.5px solid var(--border) !important;
+    border: 1px solid var(--border2) !important;
     border-radius: var(--radius) !important;
-    color: var(--text) !important;
-    font-family: 'DM Mono', monospace !important;
-    font-size: 0.82rem !important;
-    line-height: 1.7 !important;
+    color: var(--cream) !important;
+    font-family: 'IBM Plex Sans', sans-serif !important;
+    font-size: 0.83rem !important;
+    font-weight: 300 !important;
+    line-height: 1.75 !important;
     resize: vertical !important;
-    transition: border-color 0.25s;
+    transition: border-color 0.2s;
+    caret-color: var(--cream);
 }
 [data-testid="stTextArea"] textarea:focus {
-    border-color: var(--ember1) !important;
-    box-shadow: 0 0 0 3px rgba(255, 77, 0, 0.12) !important;
+    border-color: var(--border2) !important;
+    box-shadow: none !important;
     outline: none !important;
 }
+[data-testid="stTextArea"] textarea::placeholder { color: var(--ink3) !important; }
 [data-testid="stTextArea"] label { display: none !important; }
 
-/* ── Analyze button ── */
-[data-testid="stBaseButton-primary"] button,
+/* Button */
 div.stButton > button {
     width: 100% !important;
-    background: linear-gradient(135deg, var(--ember1), #c2410c) !important;
-    color: #fff !important;
+    background: var(--cream) !important;
+    color: var(--ink) !important;
     border: none !important;
     border-radius: var(--radius) !important;
-    font-family: 'Syne', sans-serif !important;
-    font-weight: 700 !important;
-    font-size: 0.95rem !important;
-    letter-spacing: 0.06em !important;
-    padding: 0.85rem 2rem !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-weight: 500 !important;
+    font-size: 0.78rem !important;
+    letter-spacing: 0.12em !important;
+    text-transform: uppercase !important;
+    padding: 0.9rem 2rem !important;
     cursor: pointer !important;
-    transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s !important;
-    box-shadow: 0 4px 24px rgba(255, 77, 0, 0.3) !important;
-    margin-top: 0.5rem !important;
+    transition: background 0.2s, transform 0.15s !important;
+    margin-top: 0.25rem !important;
 }
 div.stButton > button:hover {
-    opacity: 0.92 !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 8px 32px rgba(255, 77, 0, 0.45) !important;
-}
-div.stButton > button:active {
-    transform: translateY(0px) !important;
+    background: var(--cream2) !important;
+    transform: translateY(-1px) !important;
 }
 
-/* ── Score card ── */
-.score-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 2.5rem 2rem 2rem;
-    margin-top: 2.2rem;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
+/* Result */
+.result-wrap {
+    margin-top: 2.5rem;
+    border-top: 1px solid var(--border2);
+    padding-top: 2rem;
 }
-.score-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--ember1), var(--ember2), var(--ember3));
-}
-.score-number {
-    font-family: 'Syne', sans-serif;
-    font-size: 5rem;
-    font-weight: 800;
-    line-height: 1;
-    background: linear-gradient(135deg, var(--ember3), var(--ember1));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-.score-label {
-    font-size: 0.72rem;
+.result-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--ink3);
+    margin-bottom: 1.25rem;
+}
+.score-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+.score-big {
+    font-family: 'Playfair Display', serif;
+    font-size: 6rem;
+    font-weight: 400;
+    line-height: 1;
+    color: var(--cream);
+    letter-spacing: -0.03em;
+}
+.score-denom {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1rem;
+    color: var(--ink3);
+    font-weight: 300;
+}
+.score-verdict {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--ink3);
+    margin-bottom: 1.75rem;
+}
+.bar-track {
+    background: var(--surface2);
+    border-radius: 2px;
+    height: 2px;
+    margin-bottom: 2.25rem;
+    overflow: hidden;
+}
+.bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--cream2);
+}
+
+/* Skills */
+.skills-heading {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink3);
+    margin: 2rem 0 0.75rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1.5rem;
+}
+.tag-row { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.75rem; }
+.tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    padding: 0.22rem 0.55rem;
+    border-radius: 3px;
+    letter-spacing: 0.03em;
+}
+.tag-hit  { background: rgba(122,158,110,0.18); color: #a3c494; border: 1px solid rgba(122,158,110,0.3); }
+.tag-miss { background: var(--surface2); color: var(--ink3); border: 1px solid var(--border); }
+.skills-tally {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.67rem;
+    color: var(--ink3);
     margin-top: 0.4rem;
 }
 
-/* ── Progress bar ── */
-.progress-wrap {
-    background: var(--surface2);
-    border-radius: 999px;
-    height: 8px;
-    margin: 1.6rem 0 1.2rem;
-    overflow: hidden;
-}
-.progress-fill {
-    height: 100%;
-    border-radius: 999px;
-    background: linear-gradient(90deg, var(--ember1), var(--ember3));
-    transition: width 1s ease;
-    box-shadow: 0 0 12px rgba(255, 140, 0, 0.6);
+/* Note */
+.result-note {
+    font-size: 0.82rem;
+    font-weight: 300;
+    color: var(--ink3);
+    line-height: 1.8;
+    margin-top: 1.75rem;
+    padding: 1.25rem 1.4rem;
+    background: var(--surface);
+    border-left: 2px solid var(--border2);
+    border-radius: 0 var(--radius) var(--radius) 0;
 }
 
-/* ── Verdict chip ── */
-.verdict {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.55rem 1.2rem;
-    border-radius: 999px;
-    font-family: 'Syne', sans-serif;
-    font-weight: 600;
-    font-size: 0.88rem;
-    margin-top: 0.8rem;
+/* Debug */
+.debug-wrap {
+    margin-top: 2rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1.25rem;
 }
-.verdict-excellent { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.35); color: #4ade80; }
-.verdict-moderate  { background: rgba(251,191,36,0.10); border: 1px solid rgba(251,191,36,0.3); color: #fbbf24; }
-.verdict-low       { background: rgba(255,77,0,0.10);   border: 1px solid rgba(255,77,0,0.3);   color: var(--ember2); }
-
-/* ── Tips box ── */
-.tips-box {
-    background: var(--surface2);
-    border-left: 3px solid var(--ember1);
-    border-radius: 0 10px 10px 0;
-    padding: 1rem 1.2rem;
-    margin-top: 1.4rem;
-    font-size: 0.8rem;
-    color: var(--muted);
-    line-height: 1.75;
+.debug-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink3);
+    margin-bottom: 0.5rem;
+}
+.debug-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--ink3);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-all;
 }
 
-/* ── Alerts ── */
+/* Alerts */
 [data-testid="stAlert"] {
     background: var(--surface) !important;
+    border: 1px solid var(--border2) !important;
     border-radius: var(--radius) !important;
-    border: 1px solid var(--border) !important;
-    color: var(--text) !important;
-    font-family: 'DM Mono', monospace !important;
-    font-size: 0.82rem !important;
+    color: var(--ink3) !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 0.75rem !important;
 }
-
-/* ── Spinner ── */
-[data-testid="stSpinner"] { color: var(--ember1) !important; }
-
-/* ── Misc ── */
-footer, #MainMenu { visibility: hidden; }
+[data-testid="stSpinner"] p {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 0.75rem !important;
+    color: var(--ink3) !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# ── Hero ─────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
+# Header
+# ------------------------------------------------------------------------------
 st.markdown("""
-<div class="hero">
-    <div class="hero-badge">AI-Powered · Instant Analysis</div>
-    <h1>Resume Analyzer</h1>
-    <p class="hero-sub">
-        Drop your resume. Paste the job description.<br>
-        Get a precision match score in seconds.
-    </p>
+<div class="site-header">
+    <div class="site-kicker">Career Tools</div>
+    <h1 class="site-title">Resume Analyzer</h1>
+    <p class="site-desc">Upload your resume and paste a job description.<br>
+    We score how well your experience matches the role.</p>
 </div>
-<div class="glow-divider"></div>
 """, unsafe_allow_html=True)
 
-# ── Resume upload ─────────────────────────────────────────────────────────────
-st.markdown('<div class="section-label">01 — Your Resume</div>', unsafe_allow_html=True)
-resume_file = st.file_uploader(
-    "Upload resume",
-    type=["pdf"],
-    label_visibility="collapsed",
-)
+# ------------------------------------------------------------------------------
+# Inputs
+# ------------------------------------------------------------------------------
+st.markdown('<span class="field-label">Resume &mdash; PDF only</span>', unsafe_allow_html=True)
+resume_file = st.file_uploader("Upload resume", type=["pdf"], label_visibility="collapsed")
 
 st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
 
-# ── Job description ───────────────────────────────────────────────────────────
-st.markdown('<div class="section-label">02 — Job Description</div>', unsafe_allow_html=True)
-job_desc = st.text_area(
+st.markdown('<span class="field-label">Job Description</span>', unsafe_allow_html=True)
+job_desc_input = st.text_area(
     "Job description",
-    height=180,
-    placeholder="Paste the full job description here — requirements, responsibilities, preferred skills…",
+    height=200,
+    placeholder="Paste the full job description here...",
     label_visibility="collapsed",
 )
 
-st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
+st.markdown("<div style='height:1.25rem'></div>", unsafe_allow_html=True)
 
-# ── Analyze button ────────────────────────────────────────────────────────────
-analyze = st.button("⚡  Analyze Match", use_container_width=True)
+col1, col2 = st.columns([4, 1])
+with col1:
+    analyze = st.button("Analyze", use_container_width=True)
+with col2:
+    show_debug = st.checkbox("Debug", value=False)
 
-# ── Logic ─────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
+# Analysis
+# ------------------------------------------------------------------------------
 if analyze:
     if resume_file is None:
-        st.error("Please upload a resume PDF to continue.")
-    elif job_desc.strip() == "":
-        st.error("Please paste a job description to continue.")
+        st.error("Please upload a resume PDF.")
+    elif not job_desc_input.strip():
+        st.error("Please paste a job description.")
     else:
-        with st.spinner("Analyzing your resume…"):
-            temp_path = "temp_resume.pdf"
-            with open(temp_path, "wb") as f:
-                f.write(resume_file.getbuffer())
+        with st.spinner("Scoring..."):
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                tmp.write(resume_file.read())
+                tmp_path = tmp.name
 
-            resume_text = extract_text_from_pdf(temp_path)
-            score = calculate_similarity(resume_text, job_desc)
+            try:
+                resume_text = extract_text_from_pdf(tmp_path)
+            finally:
+                os.unlink(tmp_path)
 
-        # ── Score card ──
-        if score > 80:
-            verdict_class = "verdict-excellent"
-            verdict_icon  = "✦"
-            verdict_text  = "Excellent Match"
-            tip = "Your resume strongly aligns with this role. Ensure your achievements are quantified and your top keywords appear near the top of the document."
-        elif score > 50:
-            verdict_class = "verdict-moderate"
-            verdict_icon  = "◈"
-            verdict_text  = "Moderate Match"
-            tip = "You're in the running, but consider adding missing skills from the job description, mirroring key phrases used by the employer, and tightening your summary section."
+            job_text = job_desc_input.strip()
+
+            resume_skills = extract_skill_keywords(resume_text)
+            job_skills    = extract_skill_keywords(job_text)
+            resume_kw     = extract_meaningful_keywords(resume_text)
+            job_kw        = extract_meaningful_keywords(job_text)
+
+            score = calculate_similarity(resume_text, job_text)
+
+            matched_skills = sorted(resume_skills & job_skills)
+            missing_skills = sorted(job_skills - resume_skills)
+
+        # Verdict
+        if score >= 70:
+            verdict = "Strong match."
+            note = ("Your resume covers the core requirements well. Before applying, make sure "
+                    "your most relevant experience appears in the top third of the document and "
+                    "that key terms mirror the exact phrasing used in the posting.")
+        elif score >= 40:
+            verdict = "Partial match."
+            note = ("You meet some requirements but gaps remain. Review missing skills below "
+                    "and where honest, incorporate them. Tailoring your summary to reflect the "
+                    "role's language will help your application stand out.")
         else:
-            verdict_class = "verdict-low"
-            verdict_icon  = "◇"
-            verdict_text  = "Low Match"
-            tip = "Significant gaps detected. Highlight transferable skills, incorporate exact keywords from the posting, and tailor your work experience bullets to match the role."
-
-        progress_width = min(score, 100)
+            verdict = "Weak match."
+            note = ("Your resume does not closely align with this role. Consider whether this "
+                    "position suits your background, or do a targeted rewrite addressing the "
+                    "specific skills and responsibilities listed in the description.")
 
         st.markdown(f"""
-        <div class="score-card">
-            <div class="score-number">{score}<span style="font-size:2rem; opacity:.5">%</span></div>
-            <div class="score-label">Match Score</div>
-            <div class="progress-wrap">
-                <div class="progress-fill" style="width:{progress_width}%"></div>
+        <div class="result-wrap">
+            <div class="result-meta">Analysis complete &nbsp;&mdash;&nbsp; {resume_file.name}</div>
+            <div class="score-row">
+                <span class="score-big">{int(score)}</span>
+                <span class="score-denom">/ 100</span>
             </div>
-            <div class="verdict {verdict_class}">{verdict_icon}&nbsp;&nbsp;{verdict_text}</div>
-            <div class="tips-box">
-                <strong style="color: var(--ember2); font-size:0.7rem; letter-spacing:.1em; text-transform:uppercase;">
-                    Recommendation
-                </strong><br>{tip}
+            <div class="score-verdict">{verdict}</div>
+            <div class="bar-track">
+                <div class="bar-fill" style="width:{min(int(score),100)}%"></div>
             </div>
         </div>
         """, unsafe_allow_html=True)
+
+        if job_skills:
+            st.markdown('<div class="skills-heading">Skills from job description</div>', unsafe_allow_html=True)
+            tags_html = '<div class="tag-row">'
+            for s in sorted(job_skills):
+                cls = "tag-hit" if s in resume_skills else "tag-miss"
+                tags_html += f'<span class="tag {cls}">{s}</span>'
+            tags_html += '</div>'
+            st.markdown(tags_html, unsafe_allow_html=True)
+            st.markdown(
+                f'<p class="skills-tally">{len(matched_skills)} matched &nbsp;/&nbsp; '
+                f'{len(missing_skills)} missing out of {len(job_skills)} detected</p>',
+                unsafe_allow_html=True
+            )
+
+        st.markdown(f'<div class="result-note">{note}</div>', unsafe_allow_html=True)
+
+        # Debug panel
+        if show_debug:
+            st.markdown('<div class="debug-wrap">', unsafe_allow_html=True)
+            st.markdown('<div class="debug-label">Debug &mdash; Resume text (first 500 chars)</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="debug-box">{resume_text[:500]}</div>', unsafe_allow_html=True)
+            st.markdown('<div style="height:0.75rem"></div>', unsafe_allow_html=True)
+            st.markdown('<div class="debug-label">Debug &mdash; Skills detected in resume</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="debug-box">{sorted(resume_skills)}</div>', unsafe_allow_html=True)
+            st.markdown('<div style="height:0.75rem"></div>', unsafe_allow_html=True)
+            st.markdown('<div class="debug-label">Debug &mdash; Skills detected in job description</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="debug-box">{sorted(job_skills)}</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
