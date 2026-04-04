@@ -113,4 +113,4 @@ nltk
 
 ## Author
 
-Built by [@moazz](https://github.com/moazz)
+Built by [@Moazzam Sharif](https://github.com/MoazzamSharif)
