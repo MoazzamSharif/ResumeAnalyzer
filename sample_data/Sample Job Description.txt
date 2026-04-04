@@ -1,0 +1,42 @@
+Data Scientist - Job Description
+
+Company: Innovatech Solutions
+Location: Remote / San Francisco, CA
+
+About the Role:
+We are looking for a talented and experienced Data Scientist to join our AI team.
+You will design, build, and deploy machine learning and deep learning models that
+power our core products. You will work closely with engineering, product, and
+business teams to deliver data-driven solutions at scale.
+
+Key Responsibilities:
+- Develop and deploy machine learning and deep learning models in production
+- Build and maintain NLP pipelines for text classification, entity extraction, and summarization
+- Design ETL pipelines and work with large-scale data using Spark and Airflow
+- Collaborate with backend engineers to integrate ML APIs into existing systems
+- Monitor model performance and retrain models using MLOps best practices
+- Communicate findings and model results to non-technical stakeholders using Tableau or Power BI
+- Lead data science projects end-to-end and mentor junior team members
+
+Required Skills & Qualifications:
+- 4+ years of experience as a Data Scientist or Machine Learning Engineer
+- Strong proficiency in Python and SQL
+- Hands-on experience with TensorFlow, PyTorch, or Keras
+- Experience with NLP techniques and frameworks (BERT, Transformers, spaCy, NLTK)
+- Solid understanding of machine learning algorithms: regression, classification, clustering, ensemble methods
+- Experience with cloud platforms: AWS (SageMaker, S3, EC2) or GCP
+- Familiarity with Docker, Kubernetes, and CI/CD pipelines
+- Experience with databases: PostgreSQL, MySQL, MongoDB
+- Strong analytical and problem-solving skills
+- Excellent communication and collaboration skills
+
+Nice to Have:
+- Experience with MLflow, Kubeflow, or similar MLOps tools
+- Knowledge of Apache Spark and distributed computing
+- Contributions to open-source machine learning projects
+- M.S. or Ph.D. in Computer Science, Statistics, or related field
+
+What We Offer:
+- Competitive salary and equity package
+- Fully remote work option
+- Collaborative and innovative team culture
