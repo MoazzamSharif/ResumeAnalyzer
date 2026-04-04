@@ -6,7 +6,7 @@ A local, privacy-first resume scoring tool built with Streamlit. Upload a resume
 
 ## Demo
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)]([https://your-app-link.streamlit.app](https://resumeanalyzer-8uxwzkbwef73ymexjzqpob.streamlit.app/))
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://resumeanalyzer-8uxwzkbwef73ymexjzqpob.streamlit.app/)
 
 > Upload your resume → Paste the JD → Click Analyze
 
